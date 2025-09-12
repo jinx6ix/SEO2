@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(USER)
+  plan          Plan      @default(FREE)
+  stripeCustomerId String?
+  subscriptionId String?
+  subscriptionStatus String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  sites         Site[]
+  audits        Audit[]
+  keywords      Keyword[]
+  reports       Report[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Site {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  description String?
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audits      Audit[]
+  keywords    Keyword[]
+  reports     Report[]
+}
+
+model Audit {
+  id          String      @id @default(cuid())
+  siteId      String
+  userId      String
+  status      AuditStatus @default(PENDING)
+  score       Int?
+  issues      Json?
+  recommendations Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  site        Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Keyword {
+  id          String   @id @default(cuid())
+  keyword     String
+  siteId      String
+  userId      String
+  position    Int?
+  volume      Int?
+  difficulty  Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  site        Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id          String     @id @default(cuid())
+  title       String
+  type        ReportType
+  siteId      String
+  userId      String
+  data        Json
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  site        Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum AuditStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ReportType {
+  SEO_AUDIT
+  KEYWORD_ANALYSIS
+  COMPETITOR_ANALYSIS
+  PERFORMANCE
+}
